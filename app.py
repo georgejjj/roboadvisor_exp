@@ -140,7 +140,7 @@ def welcome_page():
     
     if st.button("开始实验"):
         st.session_state.page = 1
-        st.experimental_rerun()
+        st.rerun()
 
 # Questionnaire page
 def questionnaire_page():
@@ -218,7 +218,7 @@ def questionnaire_page():
             
             st.session_state.risk_score = score
             st.session_state.page = 2
-            st.experimental_rerun()
+            st.rerun()
 
 # Initial allocation page
 def initial_allocation_page():
@@ -347,7 +347,7 @@ def initial_allocation_page():
                 st.session_state.initial_allocation = initial_alloc
                 st.session_state.recommended_allocation = generate_recommendation(st.session_state.risk_score)
                 st.session_state.page = 3
-                st.experimental_rerun()
+                st.rerun()
 
 # Recommendation page
 def recommendation_page():
@@ -429,7 +429,7 @@ def recommendation_page():
     
     if st.button("修改配置方案"):
         st.session_state.page = 4
-        st.experimental_rerun()
+        st.rerun()
 
 # Modification page
 def modification_page():
@@ -488,7 +488,7 @@ def modification_page():
             else:
                 st.session_state.final_allocation = final_alloc
                 st.session_state.page = 5
-                st.experimental_rerun()
+                st.rerun()
 
 # Simulation page
 def simulation_page():
@@ -637,7 +637,7 @@ def simulation_page():
         for key in list(st.session_state.keys()):
             del st.session_state[key]
         st.session_state.page = 0
-        st.experimental_rerun()
+        st.rerun()
 
 # Main app logic
 def main():
@@ -658,7 +658,7 @@ def main():
             if st.session_state.page > 1:
                 if st.button("← 返回上一步"):
                     st.session_state.page -= 1
-                    st.experimental_rerun()
+                    st.rerun()
     
     # Display appropriate page based on session state
     if st.session_state.page == 0:
