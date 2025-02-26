@@ -1,55 +1,66 @@
-# 智能投顾实验平台 (Robo-Advisor Experimental Platform)
+# Robo-Advisor Experimental Platform (智能投顾实验平台)
 
-这是一个使用Streamlit构建的智能投顾实验平台，允许用户体验智能投顾的整个流程，从风险评估到资产配置再到收益模拟。
+This is a Robo-Advisor experimental platform built with Streamlit that allows users to experience the entire process of robo-advising, from risk assessment to asset allocation and return simulation.
 
-## 功能特点
+## Features
 
-1. **个人风险评估问卷**：评估用户的风险承受能力和投资偏好
-2. **资产风险收益展示**：直观展示不同资产类别的风险和收益特征
-3. **用户初始配置**：用户可以根据自己的理解进行资产配置
-4. **智能投顾推荐**：根据用户的风险评估提供个性化的资产配置建议
-5. **方案修改**：用户可以修改系统推荐的配置方案
-6. **收益模拟比较**：使用蒙特卡洛模拟对比不同配置方案的潜在收益表现
+1. **Risk Assessment Questionnaire**: Evaluates the user's risk tolerance and investment preferences
+2. **Asset Risk-Return Display**: Visualizes the risk and return characteristics of different asset classes
+3. **User Initial Allocation**: Users can allocate assets based on their understanding
+4. **Robo-Advisor Recommendation**: Provides personalized asset allocation suggestions based on the user's risk assessment
+5. **Plan Modification**: Users can modify the recommended allocation plan
+6. **Return Simulation Comparison**: Uses Monte Carlo simulation to compare potential returns of different allocation plans
 
-## 安装与运行
+## Installation and Running Locally
 
-### 前提条件
+### Prerequisites
 
 - Python 3.8+
-- pip（Python包管理器）
+- pip (Python package manager)
 
-### 安装步骤
+### Installation Steps
 
-1. 克隆或下载本仓库到本地
+1. Clone or download this repository
 
-2. 安装所需依赖项
+2. Install required dependencies
    ```
    pip install -r requirements.txt
    ```
 
-3. 运行应用
+3. Run the app
    ```
    streamlit run app.py
    ```
 
-4. 在浏览器中打开应用（通常会自动打开）
+4. Open in your browser (typically opens automatically)
    ```
    Local URL: http://localhost:8501
    ```
 
-## 使用流程
+## Deployment on Streamlit Share
 
-1. 开始界面 → 点击"开始实验"
-2. 填写个人信息和风险偏好问卷 → 提交
-3. 查看资产信息，输入初始配置方案 → 提交
-4. 查看和比较智能投顾推荐方案 → 点击"修改配置方案"
-5. 根据推荐调整配置 → 点击"确认并进入收益模拟"
-6. 查看不同配置方案的模拟收益对比
+This application is optimized for deployment on Streamlit Share. All charts and text elements have been configured to use English for better compatibility with cloud deployment environments.
 
-## 数据说明
+To deploy this application on Streamlit Share:
+1. Fork this repository to your GitHub account
+2. Go to [Streamlit Share](https://share.streamlit.io/) and sign in
+3. Create a new app and connect it to your forked repository
+4. Set the main file path to `app.py`
+5. Deploy!
 
-本应用中使用的资产数据和推荐配置是模拟数据，仅用于教育和演示目的。在实际投资中，请咨询专业的金融顾问。
+## Usage Flow
 
-## 注意事项
+1. Start screen → Click "Start Experiment"
+2. Fill out personal information and risk tolerance questionnaire → Submit
+3. View asset information, input initial allocation plan → Submit
+4. View and compare robo-advisor recommendation → Click "Modify Allocation Plan"
+5. Adjust your allocation based on recommendations → Click "Confirm and Proceed to Return Simulation"
+6. View simulated returns comparison of different allocation plans
 
-本应用仅作为教育工具和实验平台，不构成投资建议。投资有风险，决策需谨慎。 
+## Data Note
+
+Asset data and recommended allocations in this application are simulated for educational and demonstration purposes only. For actual investing, please consult professional financial advisors.
+
+## Important Notice
+
+This application is intended solely as an educational tool and experimental platform. It does not constitute investment advice. Investment involves risks, decisions should be made cautiously. 

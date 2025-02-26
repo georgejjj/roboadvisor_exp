@@ -26,6 +26,25 @@ if 'final_allocation' not in st.session_state:
     st.session_state.final_allocation = None
 if 'personal_info' not in st.session_state:
     st.session_state.personal_info = {}
+if 'language' not in st.session_state:
+    st.session_state.language = "zh"  # Default language: Chinese
+
+# Asset data translations (only for charts)
+asset_names_en = {
+    "股票": "Stocks",
+    "债券": "Bonds",
+    "现金": "Cash",
+    "房地产": "Real Estate",
+    "黄金": "Gold"
+}
+
+asset_descriptions_en = {
+    "股票": "High risk with high return potential, offers significant long-term growth",
+    "债券": "Medium risk, provides stable income flow",
+    "现金": "Low risk with low returns, highly liquid",
+    "房地产": "Medium risk, offers both income and growth potential",
+    "黄金": "Medium risk, good hedge against inflation"
+}
 
 # Mock asset data
 assets = {
@@ -124,6 +143,10 @@ def simulate_returns(allocation, days=365, initial_investment=10000):
     
     return total_portfolio
 
+# Helper function to translate asset names for charts
+def get_asset_name_en(asset_zh):
+    return asset_names_en.get(asset_zh, asset_zh)
+
 # Welcome page
 def welcome_page():
     st.title("欢迎使用智能投顾实验平台")
@@ -131,20 +154,26 @@ def welcome_page():
     这个平台将帮助您了解自己的投资偏好，并提供个性化的投资建议。
     
     实验流程：
-    1. 完成个人基本情况与风险偏好问卷
-    2. 查看不同资产的风险收益特征，提供您的初始配置方案
+    1. 完成关于您个人情况和风险承受能力的问卷
+    2. 查看不同资产的风险收益特征，并提供您的初始配置方案
     3. 查看系统推荐的资产配置方案
-    4. 根据推荐方案修改您的配置
-    5. 比较不同配置方案的模拟收益情况
+    4. 根据推荐修改您的配置
+    5. 比较不同配置方案的模拟收益
     """)
     
-    if st.button("开始实验"):
-        st.session_state.page = 1
-        st.rerun()
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        if st.button("开始实验", use_container_width=True):
+            st.session_state.page = 1
+            st.rerun()
+    
+    # Add a language selector in the sidebar
+    with st.sidebar:
+        st.caption("注意：图表将以英文显示以获得更好的兼容性")
 
 # Questionnaire page
 def questionnaire_page():
-    st.title("个人基本情况与风险偏好问卷")
+    st.title("个人信息与风险承受能力问卷")
     
     with st.form(key="questionnaire_form"):
         col1, col2 = st.columns(2)
@@ -153,7 +182,7 @@ def questionnaire_page():
             name = st.text_input("姓名", placeholder="请输入您的姓名")
             age = st.number_input("年龄", min_value=18, max_value=100, value=30)
             gender = st.selectbox("性别", ["男", "女", "其他"])
-            income = st.selectbox("年收入 (人民币)", 
+            income = st.selectbox("年收入（人民币）", 
                 ["10万以下", "10-30万", "30-50万", "50-100万", "100万以上"])
             
         with col2:
@@ -162,32 +191,32 @@ def questionnaire_page():
             
             st.subheader("风险承受能力评估")
             q1 = st.select_slider(
-                "1. 您能接受的最大年度投资损失是多少？",
-                options=["不能接受任何损失", "最多5%", "最多10%", "最多20%", "最多30%", "超过30%"],
+                "1. 您能接受的最大年度投资亏损是多少？",
+                options=["不能接受亏损", "最多5%", "最多10%", "最多20%", "最多30%", "30%以上"],
                 value="最多10%"
             )
             
             q2 = st.select_slider(
                 "2. 如果您的投资在短期内下跌20%，您会：",
-                options=["立即全部卖出", "卖出部分", "不做任何操作", "买入更多"],
-                value="不做任何操作"
+                options=["立即全部卖出", "卖出一部分", "不采取行动", "买入更多"],
+                value="不采取行动"
             )
             
             q3 = st.select_slider(
                 "3. 您更倾向于哪种类型的投资？",
-                options=["保本保息的储蓄产品", "低风险理财产品", "混合型基金", "股票型基金", "个股投资"],
+                options=["保本型产品", "低风险理财产品", "混合型基金", "股票型基金", "个股"],
                 value="混合型基金"
             )
             
             q4 = st.select_slider(
                 "4. 您的投资目标是什么？",
-                options=["保存资金价值", "略高于通胀的稳定收益", "适度的资本增长", "显著的资本增长", "积极的资本增长"],
-                value="适度的资本增长"
+                options=["保持资本价值", "获得高于通胀的稳定回报", "适度资本增长", "显著资本增长", "积极资本增长"],
+                value="适度资本增长"
             )
             
             q5 = st.select_slider(
                 "5. 您计划的投资期限是多久？",
-                options=["1年以内", "1-3年", "3-5年", "5-10年", "10年以上"],
+                options=["1年以下", "1-3年", "3-5年", "5-10年", "10年以上"],
                 value="3-5年"
             )
         
@@ -196,11 +225,11 @@ def questionnaire_page():
         if submitted:
             # Calculate risk score (0-100)
             risk_mapping = {
-                "q1": {"不能接受任何损失": 0, "最多5%": 20, "最多10%": 40, "最多20%": 60, "最多30%": 80, "超过30%": 100},
-                "q2": {"立即全部卖出": 0, "卖出部分": 33, "不做任何操作": 67, "买入更多": 100},
-                "q3": {"保本保息的储蓄产品": 0, "低风险理财产品": 25, "混合型基金": 50, "股票型基金": 75, "个股投资": 100},
-                "q4": {"保存资金价值": 0, "略高于通胀的稳定收益": 25, "适度的资本增长": 50, "显著的资本增长": 75, "积极的资本增长": 100},
-                "q5": {"1年以内": 0, "1-3年": 25, "3-5年": 50, "5-10年": 75, "10年以上": 100}
+                "q1": {"不能接受亏损": 0, "最多5%": 20, "最多10%": 40, "最多20%": 60, "最多30%": 80, "30%以上": 100},
+                "q2": {"立即全部卖出": 0, "卖出一部分": 33, "不采取行动": 67, "买入更多": 100},
+                "q3": {"保本型产品": 0, "低风险理财产品": 25, "混合型基金": 50, "股票型基金": 75, "个股": 100},
+                "q4": {"保持资本价值": 0, "获得高于通胀的稳定回报": 25, "适度资本增长": 50, "显著资本增长": 75, "积极资本增长": 100},
+                "q5": {"1年以下": 0, "1-3年": 25, "3-5年": 50, "5-10年": 75, "10年以上": 100}
             }
             
             score = (risk_mapping["q1"][q1] + risk_mapping["q2"][q2] + 
@@ -237,124 +266,131 @@ def initial_allocation_page():
     else:
         risk_category = "激进型"
     
-    st.write(f"根据您的问卷回答，您的风险承受能力得分为: **{st.session_state.risk_score:.1f}/100**")
-    st.write(f"风险偏好类型: **{risk_category}**")
+    st.write(f"根据您的问卷回答，您的风险承受能力评分为：**{st.session_state.risk_score:.1f}/100**")
+    st.write(f"风险偏好类型：**{risk_category}**")
     
     # Display asset information
     st.subheader("资产风险收益特征")
     
-    # 创建数据表格和可视化的单行布局
+    # Create dataframe with English translations for visualization
     asset_df = pd.DataFrame({
-        "资产类别": list(assets.keys()),
-        "预期年化收益率 (%)": [assets[asset]["expected_return"] * 100 for asset in assets],
-        "风险 (波动率) (%)": [assets[asset]["risk"] * 100 for asset in assets],
-        "风险收益比": [assets[asset]["expected_return"] / assets[asset]["risk"] for asset in assets],
-        "描述": [assets[asset]["description"] for asset in assets]
+        "Asset Class": [asset_names_en[asset] for asset in assets.keys()],
+        "Expected Annual Return (%)": [assets[asset]["expected_return"] * 100 for asset in assets],
+        "Risk (Volatility) (%)": [assets[asset]["risk"] * 100 for asset in assets],
+        "Return/Risk Ratio": [assets[asset]["expected_return"] / assets[asset]["risk"] for asset in assets],
+        "Description": [asset_descriptions_en[asset] for asset in assets]
     })
     
-    # 创建更紧凑的布局
+    # Create more compact layout
     col1, col2 = st.columns([3, 3])
     
     with col1:
-        # 显示格式化的数据表格
+        # Display formatted data table with Chinese headers but English asset names
+        chinese_df = pd.DataFrame({
+            "资产类别": [asset for asset in assets.keys()],
+            "预期年化收益率 (%)": [assets[asset]["expected_return"] * 100 for asset in assets],
+            "风险 (波动率) (%)": [assets[asset]["risk"] * 100 for asset in assets],
+            "收益/风险比": [assets[asset]["expected_return"] / assets[asset]["risk"] for asset in assets]
+        })
+        
         st.dataframe(
-            asset_df[["资产类别", "预期年化收益率 (%)", "风险 (波动率) (%)", "风险收益比"]].style.format({
+            chinese_df.style.format({
                 "预期年化收益率 (%)": "{:.1f}",
                 "风险 (波动率) (%)": "{:.1f}",
-                "风险收益比": "{:.2f}"
+                "收益/风险比": "{:.2f}"
             }),
             height=200,
             use_container_width=True
         )
     
     with col2:
-        # 创建更紧凑的图表
+        # Create more compact chart with English labels
         fig, ax = plt.subplots(figsize=(6, 5))
         scatter = sns.scatterplot(
-            x="风险 (波动率) (%)", 
-            y="预期年化收益率 (%)", 
+            x="Risk (Volatility) (%)", 
+            y="Expected Annual Return (%)", 
             data=asset_df, 
             s=150, 
             ax=ax
         )
         
-        # 添加标签
+        # Add labels in English
         for i, asset in enumerate(assets):
             plt.annotate(
-                asset, 
+                asset_names_en[asset], 
                 (assets[asset]["risk"] * 100, assets[asset]["expected_return"] * 100),
                 xytext=(5, 5), 
                 textcoords='offset points', 
                 fontsize=10
             )
         
-        plt.title("资产风险-收益分布", fontsize=12)
-        plt.xlabel("风险 (波动率) %", fontsize=10)
-        plt.ylabel("预期年化收益率 %", fontsize=10)
+        plt.title("Asset Risk-Return Distribution", fontsize=12)
+        plt.xlabel("Risk (Volatility) %", fontsize=10)
+        plt.ylabel("Expected Annual Return %", fontsize=10)
         plt.grid(True, linestyle='--', alpha=0.5)
         plt.tight_layout()
         st.pyplot(fig)
     
-    # 显示资产描述信息 (使用一行文本代替多行显示)
-    st.expander("点击查看资产详细描述", expanded=False).write(
-        "\n".join([f"**{asset}**: {info['description']}" for asset, info in assets.items()])
-    )
+    # Display asset descriptions (using expander to save space)
+    with st.expander("点击查看详细资产描述", expanded=False):
+        for asset, info in assets.items():
+            st.write(f"**{asset}**: {info['description']}")
     
     # User allocation input
-    st.subheader("请输入您的初始资产配置方案")
-    st.write("请为每种资产类别分配投资比例 (总和需等于100%)")
+    st.subheader("输入您的初始资产配置方案")
+    st.write("请为每个资产类别分配投资百分比（总计必须等于100%）")
     
-    initial_alloc = {}
-    total = 0
+    # Initialize session state for initial allocations if not present
+    if 'initial_alloc_values' not in st.session_state:
+        st.session_state.initial_alloc_values = {asset: 20.0 for asset in assets}
     
-    col1, col2 = st.columns(2)
+    # Function to update total when any slider changes
+    def update_total():
+        st.session_state.initial_total = sum(st.session_state.initial_alloc_values.values())
     
-    with st.form(key="initial_allocation_form"):
-        for i, asset in enumerate(assets):
-            if i % 2 == 0:
-                with col1:
-                    initial_alloc[asset] = st.slider(
-                        f"{asset} (%)", 
-                        min_value=0.0, 
-                        max_value=100.0, 
-                        value=20.0,
-                        step=1.0,
-                        key=f"initial_{asset}"
-                    )
-            else:
-                with col2:
-                    initial_alloc[asset] = st.slider(
-                        f"{asset} (%)", 
-                        min_value=0.0, 
-                        max_value=100.0, 
-                        value=20.0,
-                        step=1.0,
-                        key=f"initial_{asset}"
-                    )
-        
-        # Convert percentages to decimals
-        for asset in initial_alloc:
-            initial_alloc[asset] = initial_alloc[asset] / 100.0
-            total += initial_alloc[asset]
-        
-        submitted = st.form_submit_button("提交配置方案")
-        
-        if submitted:
-            # Check if total is close to 1.0 (100%)
-            if abs(total - 1.0) > 0.01:
-                st.error(f"您的配置总和为 {total*100:.1f}%，请确保总和为100%")
-            else:
-                st.session_state.initial_allocation = initial_alloc
-                st.session_state.recommended_allocation = generate_recommendation(st.session_state.risk_score)
-                st.session_state.page = 3
-                st.rerun()
+    # Display sliders in a more compact layout
+    cols = st.columns(5)
+    
+    for i, asset in enumerate(assets):
+        with cols[i % 5]:
+            st.session_state.initial_alloc_values[asset] = st.slider(
+                f"{asset} (%)", 
+                min_value=0.0, 
+                max_value=100.0, 
+                value=st.session_state.initial_alloc_values.get(asset, 20.0),
+                step=1.0,
+                key=f"initial_slider_{asset}",
+                on_change=update_total
+            )
+    
+    # Calculate and display total
+    total = sum(st.session_state.initial_alloc_values.values())
+    
+    # Display total with color based on whether it equals 100%
+    if abs(total - 100.0) < 0.01:
+        st.success(f"总配置比例: **{total:.1f}%** ✓")
+    else:
+        st.warning(f"总配置比例: **{total:.1f}%** (应当等于100%)")
+    
+    # Submit button (outside of form)
+    if st.button("提交配置方案"):
+        # Check if total is close to 100%
+        if abs(total - 100.0) > 0.01:
+            st.error(f"您的配置总计为{total:.1f}%，请确保总计等于100%")
+        else:
+            # Convert to decimal format for internal calculations
+            initial_alloc = {asset: st.session_state.initial_alloc_values[asset] / 100.0 for asset in assets}
+            st.session_state.initial_allocation = initial_alloc
+            st.session_state.recommended_allocation = generate_recommendation(st.session_state.risk_score)
+            st.session_state.page = 3
+            st.rerun()
 
 # Recommendation page
 def recommendation_page():
     st.title("智能投顾推荐方案")
     
     # Visualize comparison between initial and recommended allocations
-    st.subheader("您的初始方案 vs 智能投顾推荐方案")
+    st.subheader("您的初始方案 vs 智能投顾推荐")
     
     # Calculate metrics for both allocations
     initial_return, initial_risk = calculate_portfolio_metrics(st.session_state.initial_allocation)
@@ -365,130 +401,155 @@ def recommendation_page():
     with col1:
         st.write("### 您的初始方案")
         initial_df = pd.DataFrame({
-            "资产": list(st.session_state.initial_allocation.keys()),
+            "资产": [asset for asset in st.session_state.initial_allocation.keys()],
             "配置比例": [f"{v*100:.1f}%" for v in st.session_state.initial_allocation.values()]
         })
-        st.dataframe(initial_df)
+        st.dataframe(initial_df, use_container_width=True)
         st.metric("预期年化收益率", f"{initial_return*100:.2f}%")
-        st.metric("预期风险 (波动率)", f"{initial_risk*100:.2f}%")
-        st.metric("收益风险比", f"{(initial_return/initial_risk):.2f}")
+        st.metric("预期风险（波动率）", f"{initial_risk*100:.2f}%")
+        st.metric("收益/风险比", f"{(initial_return/initial_risk):.2f}")
         
-        # Pie chart for initial allocation
-        fig, ax = plt.subplots(figsize=(8, 8))
+        # Pie chart for initial allocation with English labels
+        fig, ax = plt.subplots(figsize=(6, 6))
         plt.pie(
             list(st.session_state.initial_allocation.values()), 
-            labels=list(st.session_state.initial_allocation.keys()),
+            labels=[asset_names_en[asset] for asset in st.session_state.initial_allocation.keys()],
             autopct='%1.1f%%',
             startangle=90,
             shadow=False
         )
-        plt.title("您的初始资产配置")
+        plt.title("Your Initial Asset Allocation")
         st.pyplot(fig)
     
     with col2:
         st.write("### 智能投顾推荐方案")
         rec_df = pd.DataFrame({
-            "资产": list(st.session_state.recommended_allocation.keys()),
+            "资产": [asset for asset in st.session_state.recommended_allocation.keys()],
             "配置比例": [f"{v*100:.1f}%" for v in st.session_state.recommended_allocation.values()]
         })
-        st.dataframe(rec_df)
+        st.dataframe(rec_df, use_container_width=True)
         st.metric("预期年化收益率", f"{rec_return*100:.2f}%")
-        st.metric("预期风险 (波动率)", f"{rec_risk*100:.2f}%")
-        st.metric("收益风险比", f"{(rec_return/rec_risk):.2f}")
+        st.metric("预期风险（波动率）", f"{rec_risk*100:.2f}%")
+        st.metric("收益/风险比", f"{(rec_return/rec_risk):.2f}")
         
-        # Pie chart for recommended allocation
-        fig, ax = plt.subplots(figsize=(8, 8))
+        # Pie chart for recommended allocation with English labels
+        fig, ax = plt.subplots(figsize=(6, 6))
         plt.pie(
             list(st.session_state.recommended_allocation.values()), 
-            labels=list(st.session_state.recommended_allocation.keys()),
+            labels=[asset_names_en[asset] for asset in st.session_state.recommended_allocation.keys()],
             autopct='%1.1f%%',
             startangle=90,
             shadow=False
         )
-        plt.title("智能投顾推荐资产配置")
+        plt.title("Robo-Advisor Recommended Allocation")
         st.pyplot(fig)
     
     # Risk-return comparison plot
-    st.subheader("风险-收益对比")
-    fig, ax = plt.subplots(figsize=(10, 6))
-    plt.scatter(initial_risk*100, initial_return*100, color='blue', s=200, label='您的初始方案')
-    plt.scatter(rec_risk*100, rec_return*100, color='green', s=200, label='智能投顾推荐方案')
+    st.subheader("风险收益对比")
     
-    # Add individual assets
-    for asset, info in assets.items():
-        plt.scatter(info["risk"]*100, info["expected_return"]*100, s=100, alpha=0.6)
-        plt.annotate(asset, (info["risk"]*100, info["expected_return"]*100), 
-                    xytext=(5, 5), textcoords='offset points')
+    # Create a more compact visual for risk-return comparison
+    col1, col2 = st.columns([3, 1])
     
-    plt.title("投资组合风险-收益对比")
-    plt.xlabel("风险 (波动率) %")
-    plt.ylabel("预期年化收益率 %")
-    plt.grid(True, linestyle='--', alpha=0.7)
-    plt.legend()
-    st.pyplot(fig)
+    with col1:
+        fig, ax = plt.subplots(figsize=(8, 5))
+        # Plot the two portfolios
+        plt.scatter(initial_risk*100, initial_return*100, color='blue', s=150, label='Your Initial Plan')
+        plt.scatter(rec_risk*100, rec_return*100, color='green', s=150, label='Robo-Advisor Recommendation')
+        
+        # Add individual assets
+        for asset, info in assets.items():
+            plt.scatter(info["risk"]*100, info["expected_return"]*100, s=80, alpha=0.6)
+            plt.annotate(asset_names_en[asset], (info["risk"]*100, info["expected_return"]*100), 
+                        xytext=(5, 5), textcoords='offset points', fontsize=9)
+        
+        plt.title("Portfolio Risk-Return Comparison")
+        plt.xlabel("Risk (Volatility) %")
+        plt.ylabel("Expected Annual Return %")
+        plt.grid(True, linestyle='--', alpha=0.7)
+        plt.legend()
+        plt.tight_layout()
+        st.pyplot(fig)
     
-    if st.button("修改配置方案"):
-        st.session_state.page = 4
-        st.rerun()
+    with col2:
+        # Add a summary table for quick comparison
+        comparison_df = pd.DataFrame({
+            "指标": ["收益率 (%)", "风险 (%)", "收益/风险"],
+            "初始方案": [f"{initial_return*100:.2f}", f"{initial_risk*100:.2f}", f"{(initial_return/initial_risk):.2f}"],
+            "推荐方案": [f"{rec_return*100:.2f}", f"{rec_risk*100:.2f}", f"{(rec_return/rec_risk):.2f}"],
+        })
+        st.dataframe(comparison_df, use_container_width=True, hide_index=True)
+        
+        if st.button("修改配置方案", use_container_width=True):
+            st.session_state.page = 4
+            st.rerun()
 
 # Modification page
 def modification_page():
     st.title("修改您的配置方案")
     
     st.write("""
-    基于智能投顾的推荐，您可以调整您的资产配置方案。
-    请在下面修改各资产的配置比例，完成后点击确认进入收益模拟环节。
+    根据智能投顾的推荐，您可以调整您的资产配置方案。
+    请在下方修改各个资产的百分比，并确认以进入收益模拟环节。
     """)
     
-    # Show initial values from recommended allocation
-    final_alloc = {}
-    total = 0
+    # Initialize session state for final allocations if not present
+    if 'final_alloc_values' not in st.session_state:
+        st.session_state.final_alloc_values = {
+            asset: st.session_state.recommended_allocation[asset] * 100 for asset in assets
+        }
     
-    col1, col2 = st.columns(2)
+    # Function to update total when any slider changes
+    def update_final_total():
+        st.session_state.final_total = sum(st.session_state.final_alloc_values.values())
     
-    with st.form(key="final_allocation_form"):
-        for i, asset in enumerate(assets):
-            recommended_value = st.session_state.recommended_allocation[asset] * 100
-            initial_value = st.session_state.initial_allocation[asset] * 100
-            
-            if i % 2 == 0:
-                with col1:
-                    final_alloc[asset] = st.slider(
-                        f"{asset} (%)", 
-                        min_value=0.0, 
-                        max_value=100.0, 
-                        value=float(recommended_value),
-                        step=1.0,
-                        key=f"final_{asset}",
-                        help=f"初始方案: {initial_value:.1f}%, 推荐方案: {recommended_value:.1f}%"
-                    )
-            else:
-                with col2:
-                    final_alloc[asset] = st.slider(
-                        f"{asset} (%)", 
-                        min_value=0.0, 
-                        max_value=100.0, 
-                        value=float(recommended_value),
-                        step=1.0,
-                        key=f"final_{asset}",
-                        help=f"初始方案: {initial_value:.1f}%, 推荐方案: {recommended_value:.1f}%"
-                    )
+    # Show both initial and recommended values in a compact table first
+    comparison_data = {
+        "资产": [asset for asset in assets],
+        "初始方案 (%)": [st.session_state.initial_allocation[asset] * 100 for asset in assets],
+        "推荐方案 (%)": [st.session_state.recommended_allocation[asset] * 100 for asset in assets]
+    }
+    comparison_df = pd.DataFrame(comparison_data)
+    st.dataframe(comparison_df, use_container_width=True, hide_index=True)
+    
+    # Now show sliders in a more compact layout
+    cols = st.columns(5)
+    
+    for i, asset in enumerate(assets):
+        recommended_value = st.session_state.recommended_allocation[asset] * 100
+        initial_value = st.session_state.initial_allocation[asset] * 100
         
-        # Convert percentages to decimals
-        for asset in final_alloc:
-            final_alloc[asset] = final_alloc[asset] / 100.0
-            total += final_alloc[asset]
-        
-        submitted = st.form_submit_button("确认并进入收益模拟")
-        
-        if submitted:
-            # Check if total is close to 1.0 (100%)
-            if abs(total - 1.0) > 0.01:
-                st.error(f"您的配置总和为 {total*100:.1f}%，请确保总和为100%")
-            else:
-                st.session_state.final_allocation = final_alloc
-                st.session_state.page = 5
-                st.rerun()
+        with cols[i % 5]:
+            st.session_state.final_alloc_values[asset] = st.slider(
+                f"{asset} (%)", 
+                min_value=0.0, 
+                max_value=100.0, 
+                value=st.session_state.final_alloc_values.get(asset, recommended_value),
+                step=1.0,
+                key=f"final_slider_{asset}",
+                help=f"初始: {initial_value:.1f}%, 推荐: {recommended_value:.1f}%",
+                on_change=update_final_total
+            )
+    
+    # Calculate and display total
+    total = sum(st.session_state.final_alloc_values.values())
+    
+    # Display total with color based on whether it equals 100%
+    if abs(total - 100.0) < 0.01:
+        st.success(f"总配置比例: **{total:.1f}%** ✓")
+    else:
+        st.warning(f"总配置比例: **{total:.1f}%** (应当等于100%)")
+    
+    # Submit button (outside of form)
+    if st.button("确认并进入收益模拟"):
+        # Check if total is close to 100%
+        if abs(total - 100.0) > 0.01:
+            st.error(f"您的配置总计为{total:.1f}%，请确保总计等于100%")
+        else:
+            # Convert to decimal format for internal calculations
+            final_alloc = {asset: st.session_state.final_alloc_values[asset] / 100.0 for asset in assets}
+            st.session_state.final_allocation = final_alloc
+            st.session_state.page = 5
+            st.rerun()
 
 # Simulation page
 def simulation_page():
@@ -498,22 +559,23 @@ def simulation_page():
     with st.sidebar:
         st.header("模拟参数")
         initial_investment = st.number_input(
-            "初始投资金额 (元)", 
+            "初始投资金额（人民币）", 
             min_value=1000,
             max_value=10000000,
             value=100000,
-            step=10000
+            step=10000,
+            format="%d"
         )
         
         simulation_period = st.slider(
-            "模拟期限 (天)",
+            "模拟期限（天）",
             min_value=30,
             max_value=3650,
             value=365,
             step=30
         )
         
-        st.caption("注: 本模拟使用蒙特卡洛方法，基于历史数据和统计分布生成可能的投资路径。实际投资表现可能与模拟结果有显著差异。")
+        st.caption("注意：本模拟使用蒙特卡洛方法基于历史数据和统计分布生成可能的投资路径。实际投资表现可能与模拟结果有显著差异。")
     
     # Run simulations
     initial_simulation = simulate_returns(
@@ -544,100 +606,106 @@ def simulation_page():
     dates = [(datetime.now() + timedelta(days=i)).strftime('%Y-%m-%d') for i in days]
     
     sim_df = pd.DataFrame({
-        '日期': dates,
-        '初始方案': initial_simulation,
-        '推荐方案': recommended_simulation,
-        '最终方案': final_simulation
+        'Date': dates,
+        'Initial Plan': initial_simulation,
+        'Recommended Plan': recommended_simulation,
+        'Final Plan': final_simulation
     })
     
     # Display portfolio summary and comparison
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        st.metric("初始方案最终收益", f"{initial_simulation[-1]:,.2f} 元", 
+        st.metric("初始方案最终价值", f"{initial_simulation[-1]:,.2f} 元", 
                  f"{initial_return:.2f}%")
         
     with col2:
-        st.metric("推荐方案最终收益", f"{recommended_simulation[-1]:,.2f} 元", 
+        st.metric("推荐方案最终价值", f"{recommended_simulation[-1]:,.2f} 元", 
                  f"{recommended_return:.2f}%")
         
     with col3:
-        st.metric("最终方案最终收益", f"{final_simulation[-1]:,.2f} 元", 
+        st.metric("最终方案最终价值", f"{final_simulation[-1]:,.2f} 元", 
                  f"{final_return:.2f}%")
     
-    # Plot simulation results
+    # Plot simulation results with improved layouts
     st.subheader("投资组合价值变化")
     
-    fig, ax = plt.subplots(figsize=(12, 8))
-    plt.plot(dates[::30], initial_simulation[::30], label='初始方案', linewidth=2)
-    plt.plot(dates[::30], recommended_simulation[::30], label='推荐方案', linewidth=2)
-    plt.plot(dates[::30], final_simulation[::30], label='最终方案', linewidth=2)
+    tabs = st.tabs(["价值图表", "日收益率", "绩效指标"])
     
-    plt.title("不同资产配置方案的模拟收益对比")
-    plt.xlabel("日期")
-    plt.ylabel("组合价值 (元)")
-    plt.grid(True, linestyle='--', alpha=0.7)
-    plt.legend()
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-    st.pyplot(fig)
+    with tabs[0]:
+        # Create a more efficient layout for main chart
+        fig, ax = plt.subplots(figsize=(10, 6))
+        # Sample data to avoid overcrowding (roughly monthly)
+        sample_freq = max(1, simulation_period // 30)
+        plt.plot(dates[::sample_freq], initial_simulation[::sample_freq], label='Initial Plan', linewidth=2)
+        plt.plot(dates[::sample_freq], recommended_simulation[::sample_freq], label='Recommended Plan', linewidth=2)
+        plt.plot(dates[::sample_freq], final_simulation[::sample_freq], label='Final Plan', linewidth=2)
+        
+        plt.title("Simulated Returns of Different Allocation Plans")
+        plt.xlabel("Date")
+        plt.ylabel("Portfolio Value (CNY)")
+        plt.grid(True, linestyle='--', alpha=0.5)
+        plt.legend()
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        st.pyplot(fig)
     
-    # Show histogram of daily returns
-    st.subheader("日收益率分布")
+    with tabs[1]:
+        # Calculate daily returns
+        daily_returns_initial = np.diff(initial_simulation) / initial_simulation[:-1]
+        daily_returns_recommended = np.diff(recommended_simulation) / recommended_simulation[:-1]
+        daily_returns_final = np.diff(final_simulation) / final_simulation[:-1]
+        
+        fig, ax = plt.subplots(figsize=(10, 6))
+        plt.hist(daily_returns_initial, bins=50, alpha=0.3, label='Initial Plan')
+        plt.hist(daily_returns_recommended, bins=50, alpha=0.3, label='Recommended Plan')
+        plt.hist(daily_returns_final, bins=50, alpha=0.3, label='Final Plan')
+        
+        plt.title("Daily Returns Distribution Comparison")
+        plt.xlabel("Daily Return")
+        plt.ylabel("Frequency")
+        plt.legend()
+        plt.grid(True, linestyle='--', alpha=0.5)
+        plt.tight_layout()
+        st.pyplot(fig)
     
-    # Calculate daily returns
-    daily_returns_initial = np.diff(initial_simulation) / initial_simulation[:-1]
-    daily_returns_recommended = np.diff(recommended_simulation) / recommended_simulation[:-1]
-    daily_returns_final = np.diff(final_simulation) / final_simulation[:-1]
+    with tabs[2]:
+        # Show detailed metrics with improved formatting
+        metrics_df = pd.DataFrame({
+            '指标': ['年化收益率 (%)', '波动率 (%)', '夏普比率', '最大回撤 (%)', '收益/风险比'],
+            '初始方案': [
+                f"{initial_return / (simulation_period/365):.2f}",
+                f"{np.std(daily_returns_initial) * np.sqrt(252) * 100:.2f}",
+                f"{(initial_return / (simulation_period/365)) / (np.std(daily_returns_initial) * np.sqrt(252) * 100):.2f}",
+                f"{(np.max(initial_simulation) - np.min(initial_simulation[np.argmax(initial_simulation):]))/ np.max(initial_simulation) * 100:.2f}",
+                f"{initial_return / (np.std(daily_returns_initial) * np.sqrt(252) * 100):.2f}"
+            ],
+            '推荐方案': [
+                f"{recommended_return / (simulation_period/365):.2f}",
+                f"{np.std(daily_returns_recommended) * np.sqrt(252) * 100:.2f}",
+                f"{(recommended_return / (simulation_period/365)) / (np.std(daily_returns_recommended) * np.sqrt(252) * 100):.2f}",
+                f"{(np.max(recommended_simulation) - np.min(recommended_simulation[np.argmax(recommended_simulation):]))/ np.max(recommended_simulation) * 100:.2f}",
+                f"{recommended_return / (np.std(daily_returns_recommended) * np.sqrt(252) * 100):.2f}"
+            ],
+            '最终方案': [
+                f"{final_return / (simulation_period/365):.2f}",
+                f"{np.std(daily_returns_final) * np.sqrt(252) * 100:.2f}",
+                f"{(final_return / (simulation_period/365)) / (np.std(daily_returns_final) * np.sqrt(252) * 100):.2f}",
+                f"{(np.max(final_simulation) - np.min(final_simulation[np.argmax(final_simulation):]))/ np.max(final_simulation) * 100:.2f}",
+                f"{final_return / (np.std(daily_returns_final) * np.sqrt(252) * 100):.2f}"
+            ]
+        })
+        
+        st.dataframe(metrics_df, use_container_width=True, hide_index=True)
     
-    fig, ax = plt.subplots(figsize=(12, 8))
-    plt.hist(daily_returns_initial, bins=50, alpha=0.3, label='初始方案')
-    plt.hist(daily_returns_recommended, bins=50, alpha=0.3, label='推荐方案')
-    plt.hist(daily_returns_final, bins=50, alpha=0.3, label='最终方案')
-    
-    plt.title("日收益率分布对比")
-    plt.xlabel("日收益率")
-    plt.ylabel("频率")
-    plt.legend()
-    plt.grid(True, linestyle='--', alpha=0.7)
-    st.pyplot(fig)
-    
-    # Show detailed metrics
-    st.subheader("详细绩效指标")
-    
-    metrics_df = pd.DataFrame({
-        '指标': ['年化收益率', '波动率', '夏普比率', '最大回撤', '收益风险比'],
-        '初始方案': [
-            f"{initial_return / (simulation_period/365):.2f}%",
-            f"{np.std(daily_returns_initial) * np.sqrt(252) * 100:.2f}%",
-            f"{(initial_return / (simulation_period/365)) / (np.std(daily_returns_initial) * np.sqrt(252) * 100):.2f}",
-            f"{(np.max(initial_simulation) - np.min(initial_simulation[np.argmax(initial_simulation):]))/ np.max(initial_simulation) * 100:.2f}%",
-            f"{initial_return / (np.std(daily_returns_initial) * np.sqrt(252) * 100):.2f}"
-        ],
-        '推荐方案': [
-            f"{recommended_return / (simulation_period/365):.2f}%",
-            f"{np.std(daily_returns_recommended) * np.sqrt(252) * 100:.2f}%",
-            f"{(recommended_return / (simulation_period/365)) / (np.std(daily_returns_recommended) * np.sqrt(252) * 100):.2f}",
-            f"{(np.max(recommended_simulation) - np.min(recommended_simulation[np.argmax(recommended_simulation):]))/ np.max(recommended_simulation) * 100:.2f}%",
-            f"{recommended_return / (np.std(daily_returns_recommended) * np.sqrt(252) * 100):.2f}"
-        ],
-        '最终方案': [
-            f"{final_return / (simulation_period/365):.2f}%",
-            f"{np.std(daily_returns_final) * np.sqrt(252) * 100:.2f}%",
-            f"{(final_return / (simulation_period/365)) / (np.std(daily_returns_final) * np.sqrt(252) * 100):.2f}",
-            f"{(np.max(final_simulation) - np.min(final_simulation[np.argmax(final_simulation):]))/ np.max(final_simulation) * 100:.2f}%",
-            f"{final_return / (np.std(daily_returns_final) * np.sqrt(252) * 100):.2f}"
-        ]
-    })
-    
-    st.dataframe(metrics_df)
-    
-    # Restart experiment
-    if st.button("重新开始实验"):
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        st.session_state.page = 0
-        st.rerun()
+    # Restart experiment button
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if st.button("重新开始实验", use_container_width=True):
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            st.session_state.page = 0
+            st.rerun()
 
 # Main app logic
 def main():
@@ -649,14 +717,14 @@ def main():
         # Show progress in sidebar
         if st.session_state.page > 0:
             st.write("### 实验进度")
-            progress_labels = ["开始", "问卷", "初始配置", "推荐方案", "方案修改", "收益模拟"]
+            progress_labels = ["开始", "问卷", "初始配置", "推荐方案", "修改方案", "收益模拟"]
             progress_value = st.session_state.page / (len(progress_labels) - 1)
             st.progress(progress_value)
             st.write(f"当前阶段: {progress_labels[st.session_state.page]}")
             
             # Navigation buttons
             if st.session_state.page > 1:
-                if st.button("← 返回上一步"):
+                if st.button("← 返回", use_container_width=True):
                     st.session_state.page -= 1
                     st.rerun()
     
