@@ -1,66 +1,89 @@
-# Robo-Advisor Experimental Platform (智能投顾实验平台)
+# 智能投顾实验平台
 
-This is a Robo-Advisor experimental platform built with Streamlit that allows users to experience the entire process of robo-advising, from risk assessment to asset allocation and return simulation.
+这是一个基于Streamlit开发的智能投顾实验平台，用于演示资产配置和投资组合管理的基本原理。
 
-## Features
+## 功能特点
 
-1. **Risk Assessment Questionnaire**: Evaluates the user's risk tolerance and investment preferences
-2. **Asset Risk-Return Display**: Visualizes the risk and return characteristics of different asset classes
-3. **User Initial Allocation**: Users can allocate assets based on their understanding
-4. **Robo-Advisor Recommendation**: Provides personalized asset allocation suggestions based on the user's risk assessment
-5. **Plan Modification**: Users can modify the recommended allocation plan
-6. **Return Simulation Comparison**: Uses Monte Carlo simulation to compare potential returns of different allocation plans
+- 风险承受能力评估问卷
+- 用户自定义资产配置
+- 智能投顾推荐配置
+- 投资组合风险收益分析
+- 投资收益模拟
 
-## Installation and Running Locally
+## 安装与运行
 
-### Prerequisites
+1. 克隆仓库到本地
+2. 安装依赖：`pip install -r requirements.txt`
+3. 运行应用：`streamlit run app.py`
 
-- Python 3.8+
-- pip (Python package manager)
+## 配置文件
 
-### Installation Steps
+本项目使用YAML配置文件存储资产数据和风险评分映射，主要配置文件包括：
 
-1. Clone or download this repository
+- `config/assets.yaml`: 资产数据、风险评分映射和资产配置推荐
 
-2. Install required dependencies
+配置文件结构如下：
+
+```yaml
+# 资产数据及参数配置
+assets:
+  股票:
+    expected_return: 0.08
+    risk: 0.20
+    description: 高风险高回报，具有较高的长期增长潜力
+  # 其他资产...
+
+# 资产名称翻译
+asset_names_en:
+  股票: Stocks
+  # 其他资产...
+
+# 风险评分对应的资产配置推荐
+risk_recommendations:
+  very_conservative:  # 风险评分 < 20
+    股票: 0.10
+    # 其他资产...
+  # 其他风险类别...
+
+# 风险评分映射
+risk_mapping:
+  q1:
+    不能接受亏损: 0
+    # 其他选项...
+  # 其他问题...
+
+# 风险偏好类型
+risk_categories:
+  very_conservative:
+    max_score: 20
+    name: 非常保守型
+  # 其他类别...
+```
+
+## 在线部署
+
+本项目可以部署到Streamlit Share平台。部署时需要注意：
+
+1. 确保`.streamlit/config.toml`文件存在，并启用静态文件服务：
+   ```toml
+   [server]
+   enableStaticServing = true
    ```
-   pip install -r requirements.txt
+
+2. 确保`static`目录存在，并包含备份的配置文件：
+   ```
+   static/assets.yaml
    ```
 
-3. Run the app
-   ```
-   streamlit run app.py
-   ```
+3. 部署到Streamlit Share时，配置文件会从以下位置按顺序查找：
+   - `config/assets.yaml`
+   - `static/assets.yaml`
+   - 如果都找不到，将使用内置的默认配置
 
-4. Open in your browser (typically opens automatically)
-   ```
-   Local URL: http://localhost:8501
-   ```
+## 自定义配置
 
-## Deployment on Streamlit Share
+如需修改资产数据或风险评分映射，只需编辑`config/assets.yaml`文件，无需修改代码。
 
-This application is optimized for deployment on Streamlit Share. All charts and text elements have been configured to use English for better compatibility with cloud deployment environments.
+## 许可证
 
-To deploy this application on Streamlit Share:
-1. Fork this repository to your GitHub account
-2. Go to [Streamlit Share](https://share.streamlit.io/) and sign in
-3. Create a new app and connect it to your forked repository
-4. Set the main file path to `app.py`
-5. Deploy!
-
-## Usage Flow
-
-1. Start screen → Click "Start Experiment"
-2. Fill out personal information and risk tolerance questionnaire → Submit
-3. View asset information, input initial allocation plan → Submit
-4. View and compare robo-advisor recommendation → Click "Modify Allocation Plan"
-5. Adjust your allocation based on recommendations → Click "Confirm and Proceed to Return Simulation"
-6. View simulated returns comparison of different allocation plans
-
-## Data Note
-
-Asset data and recommended allocations in this application are simulated for educational and demonstration purposes only. For actual investing, please consult professional financial advisors.
-
-## Important Notice
-
-This application is intended solely as an educational tool and experimental platform. It does not constitute investment advice. Investment involves risks, decisions should be made cautiously. 
+MIT 

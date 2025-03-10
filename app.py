@@ -4,6 +4,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from datetime import datetime, timedelta
+from config.loader import (
+    get_assets, 
+    get_asset_names_en, 
+    get_asset_descriptions_en, 
+    get_risk_recommendation,
+    get_risk_mapping,
+    get_risk_category
+)
 
 # Set page config
 st.set_page_config(
@@ -29,31 +37,10 @@ if 'personal_info' not in st.session_state:
 if 'language' not in st.session_state:
     st.session_state.language = "zh"  # Default language: Chinese
 
-# Asset data translations (only for charts)
-asset_names_en = {
-    "股票": "Stocks",
-    "债券": "Bonds",
-    "现金": "Cash",
-    "房地产": "Real Estate",
-    "黄金": "Gold"
-}
-
-asset_descriptions_en = {
-    "股票": "High risk with high return potential, offers significant long-term growth",
-    "债券": "Medium risk, provides stable income flow",
-    "现金": "Low risk with low returns, highly liquid",
-    "房地产": "Medium risk, offers both income and growth potential",
-    "黄金": "Medium risk, good hedge against inflation"
-}
-
-# Mock asset data
-assets = {
-    "股票": {"expected_return": 0.08, "risk": 0.20, "description": "高风险高回报，具有较高的长期增长潜力"},
-    "债券": {"expected_return": 0.04, "risk": 0.05, "description": "中等风险，提供稳定的收入流"},
-    "现金": {"expected_return": 0.015, "risk": 0.01, "description": "低风险低回报，具有高流动性"},
-    "房地产": {"expected_return": 0.06, "risk": 0.12, "description": "中等风险，提供收入和增长潜力"},
-    "黄金": {"expected_return": 0.03, "risk": 0.15, "description": "中等风险，对冲通胀的良好工具"}
-}
+# Load asset data from configuration
+assets = get_assets()
+asset_names_en = get_asset_names_en()
+asset_descriptions_en = get_asset_descriptions_en()
 
 # Function to calculate portfolio expected return and risk
 def calculate_portfolio_metrics(allocation):
@@ -66,47 +53,8 @@ def calculate_portfolio_metrics(allocation):
 
 # Function to generate recommended allocation based on risk score
 def generate_recommendation(risk_score):
-    # Risk score ranges from 0-100
-    if risk_score < 20:  # Very conservative
-        return {
-            "股票": 0.10,
-            "债券": 0.50,
-            "现金": 0.30,
-            "房地产": 0.05,
-            "黄金": 0.05
-        }
-    elif risk_score < 40:  # Conservative
-        return {
-            "股票": 0.25,
-            "债券": 0.45,
-            "现金": 0.15,
-            "房地产": 0.10,
-            "黄金": 0.05
-        }
-    elif risk_score < 60:  # Moderate
-        return {
-            "股票": 0.40,
-            "债券": 0.30,
-            "现金": 0.05,
-            "房地产": 0.15,
-            "黄金": 0.10
-        }
-    elif risk_score < 80:  # Aggressive
-        return {
-            "股票": 0.60,
-            "债券": 0.15,
-            "现金": 0.05,
-            "房地产": 0.15,
-            "黄金": 0.05
-        }
-    else:  # Very aggressive
-        return {
-            "股票": 0.75,
-            "债券": 0.05,
-            "现金": 0.00,
-            "房地产": 0.15,
-            "黄金": 0.05
-        }
+    # Use the configuration-based recommendation function
+    return get_risk_recommendation(risk_score)
 
 # Function to simulate investment returns
 def simulate_returns(allocation, days=365, initial_investment=10000):
@@ -224,13 +172,7 @@ def questionnaire_page():
         
         if submitted:
             # Calculate risk score (0-100)
-            risk_mapping = {
-                "q1": {"不能接受亏损": 0, "最多5%": 20, "最多10%": 40, "最多20%": 60, "最多30%": 80, "30%以上": 100},
-                "q2": {"立即全部卖出": 0, "卖出一部分": 33, "不采取行动": 67, "买入更多": 100},
-                "q3": {"保本型产品": 0, "低风险理财产品": 25, "混合型基金": 50, "股票型基金": 75, "个股": 100},
-                "q4": {"保持资本价值": 0, "获得高于通胀的稳定回报": 25, "适度资本增长": 50, "显著资本增长": 75, "积极资本增长": 100},
-                "q5": {"1年以下": 0, "1-3年": 25, "3-5年": 50, "5-10年": 75, "10年以上": 100}
-            }
+            risk_mapping = get_risk_mapping()
             
             score = (risk_mapping["q1"][q1] + risk_mapping["q2"][q2] + 
                      risk_mapping["q3"][q3] + risk_mapping["q4"][q4] + 
@@ -254,17 +196,7 @@ def initial_allocation_page():
     st.title("资产配置方案")
     
     # Risk profile summary
-    risk_category = ""
-    if st.session_state.risk_score < 20:
-        risk_category = "非常保守型"
-    elif st.session_state.risk_score < 40:
-        risk_category = "保守型"
-    elif st.session_state.risk_score < 60:
-        risk_category = "平衡型"
-    elif st.session_state.risk_score < 80:
-        risk_category = "进取型"
-    else:
-        risk_category = "激进型"
+    risk_category = get_risk_category(st.session_state.risk_score)
     
     st.write(f"根据您的问卷回答，您的风险承受能力评分为：**{st.session_state.risk_score:.1f}/100**")
     st.write(f"风险偏好类型：**{risk_category}**")
@@ -342,26 +274,44 @@ def initial_allocation_page():
     
     # Initialize session state for initial allocations if not present
     if 'initial_alloc_values' not in st.session_state:
-        st.session_state.initial_alloc_values = {asset: 20.0 for asset in assets}
+        st.session_state.initial_alloc_values = {asset: 0.0 for asset in assets}
     
-    # Function to update total when any slider changes
+    # Function to update total when any input changes
     def update_total():
         st.session_state.initial_total = sum(st.session_state.initial_alloc_values.values())
     
-    # Display sliders in a more compact layout
+    # Function to update allocation value when input changes
+    def update_allocation(asset):
+        input_key = f"initial_input_{asset}"
+        if input_key in st.session_state:
+            st.session_state.initial_alloc_values[asset] = st.session_state[input_key]
+            update_total()
+    
+    # Display direct inputs in a more compact layout
+    st.write("请直接输入各资产配置比例：")
     cols = st.columns(5)
     
     for i, asset in enumerate(assets):
         with cols[i % 5]:
-            st.session_state.initial_alloc_values[asset] = st.slider(
-                f"{asset} (%)", 
-                min_value=0.0, 
-                max_value=100.0, 
-                value=st.session_state.initial_alloc_values.get(asset, 20.0),
+            # Initialize input key for this asset
+            input_key = f"initial_input_{asset}"
+            
+            if input_key not in st.session_state:
+                st.session_state[input_key] = st.session_state.initial_alloc_values.get(asset, 0.0)
+                
+            # Direct number input
+            st.number_input(
+                f"{asset} (%)",
+                min_value=0.0,
+                max_value=100.0,
+                value=st.session_state[input_key],
                 step=1.0,
-                key=f"initial_slider_{asset}",
-                on_change=update_total
+                key=input_key,
+                on_change=lambda asset=asset: update_allocation(asset)
             )
+            
+            # Update the allocation value from input
+            st.session_state.initial_alloc_values[asset] = st.session_state[input_key]
     
     # Calculate and display total
     total = sum(st.session_state.initial_alloc_values.values())
@@ -495,12 +445,19 @@ def modification_page():
     # Initialize session state for final allocations if not present
     if 'final_alloc_values' not in st.session_state:
         st.session_state.final_alloc_values = {
-            asset: st.session_state.recommended_allocation[asset] * 100 for asset in assets
+            asset: 0.0 for asset in assets
         }
     
-    # Function to update total when any slider changes
+    # Function to update total when any input changes
     def update_final_total():
         st.session_state.final_total = sum(st.session_state.final_alloc_values.values())
+    
+    # Function to update allocation value when input changes
+    def update_final_allocation(asset):
+        input_key = f"final_input_{asset}"
+        if input_key in st.session_state:
+            st.session_state.final_alloc_values[asset] = st.session_state[input_key]
+            update_final_total()
     
     # Show both initial and recommended values in a compact table first
     comparison_data = {
@@ -511,7 +468,8 @@ def modification_page():
     comparison_df = pd.DataFrame(comparison_data)
     st.dataframe(comparison_df, use_container_width=True, hide_index=True)
     
-    # Now show sliders in a more compact layout
+    # Now show direct inputs in a more compact layout
+    st.write("请直接输入各资产配置比例：")
     cols = st.columns(5)
     
     for i, asset in enumerate(assets):
@@ -519,16 +477,26 @@ def modification_page():
         initial_value = st.session_state.initial_allocation[asset] * 100
         
         with cols[i % 5]:
-            st.session_state.final_alloc_values[asset] = st.slider(
-                f"{asset} (%)", 
-                min_value=0.0, 
-                max_value=100.0, 
-                value=st.session_state.final_alloc_values.get(asset, recommended_value),
+            # Initialize input key for this asset
+            input_key = f"final_input_{asset}"
+            
+            if input_key not in st.session_state:
+                st.session_state[input_key] = st.session_state.final_alloc_values.get(asset, 0.0)
+                
+            # Direct number input
+            st.number_input(
+                f"{asset} (%)",
+                min_value=0.0,
+                max_value=100.0,
+                value=st.session_state[input_key],
                 step=1.0,
-                key=f"final_slider_{asset}",
+                key=input_key,
                 help=f"初始: {initial_value:.1f}%, 推荐: {recommended_value:.1f}%",
-                on_change=update_final_total
+                on_change=lambda asset=asset: update_final_allocation(asset)
             )
+            
+            # Update the allocation value from input
+            st.session_state.final_alloc_values[asset] = st.session_state[input_key]
     
     # Calculate and display total
     total = sum(st.session_state.final_alloc_values.values())
