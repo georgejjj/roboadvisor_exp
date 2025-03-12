@@ -23,6 +23,53 @@ from config.loader import (
     adjust_recommendation
 )
 
+# 定义全局英文标签映射字典 - 用于解决中文字体显示问题
+CHINESE_TO_ENGLISH_LABELS = {
+    # 资产类别
+    '股票': 'Stocks', 
+    '债券': 'Bonds', 
+    '货币市场': 'Money Market', 
+    '房地产': 'Real Estate', 
+    '大宗商品': 'Commodities',
+    
+    # 图表标题
+    '风险-收益分布': 'Risk-Return Distribution',
+    '当前配置': 'Current Allocation',
+    '推荐配置': 'Recommended Allocation',
+    '最终配置': 'Final Allocation',
+    '资产配置对比': 'Asset Allocation Comparison',
+    '投资组合价值变化': 'Portfolio Value Change',
+    '累计收益率变化': 'Cumulative Return Change',
+    '日收益率分布': 'Daily Return Distribution',
+    
+    # 坐标轴标签
+    '风险 (波动率) %': 'Risk (Volatility) %',
+    '预期年化收益率 %': 'Expected Annual Return %',
+    '日期': 'Date',
+    '累计收益率 (%)': 'Cumulative Return (%)',
+    '频率': 'Frequency',
+    '日收益率': 'Daily Return',
+    
+    # 图例和标题
+    '资产类别': 'Asset Class',
+    '初始方案': 'Initial Plan',
+    '推荐方案': 'Recommended Plan',
+    '最终方案': 'Final Plan',
+    '预期收益': 'Expected Return',
+    '预期风险': 'Expected Risk',
+    
+    # 其他常用标签
+    '收益/风险比': 'Return/Risk Ratio',
+    '预期风险（波动率）': 'Expected Risk (Volatility)',
+    '波动率': 'Volatility',
+    '最大回撤': 'Max Drawdown'
+}
+
+# 标签转换函数
+def get_en_label(zh_label):
+    """将中文标签转换为英文标签，对于未定义的标签返回原始值"""
+    return CHINESE_TO_ENGLISH_LABELS.get(zh_label, zh_label)
+
 # 设置中文字体的函数
 def set_chinese_font():
     """配置matplotlib以显示中文字体，针对Streamlit Share环境优化"""
@@ -309,6 +356,19 @@ def initial_allocation_page():
         # 设置中文字体
         set_chinese_font()
         
+        # 根据用户设置选择标签语言
+        if st.session_state.use_english_labels:
+            plot_title = get_en_label("风险-收益分布") 
+            x_label = get_en_label("风险 (波动率) %")
+            y_label = get_en_label("预期年化收益率 %")
+            # 准备资产名称的英文标签
+            asset_labels = {asset: get_en_label(asset) for asset in assets}
+        else:
+            plot_title = "风险-收益分布"
+            x_label = "风险 (波动率) %"
+            y_label = "预期年化收益率 %"
+            asset_labels = {asset: asset for asset in assets}
+        
         # 使用不同的标记和颜色以提高可辨识度
         asset_markers = {'股票': 'o', '债券': 's', '货币市场': '^', '房地产': 'D', '大宗商品': 'P'}
         asset_colors = {'股票': 'red', '债券': 'blue', '货币市场': 'green', '房地产': 'purple', '大宗商品': 'orange'}
@@ -322,12 +382,12 @@ def initial_allocation_page():
                 alpha=0.7,
                 marker=asset_markers.get(asset, 'o'),
                 color=asset_colors.get(asset, 'gray'),
-                label=asset
+                label=asset_labels[asset]
             )
             
             # 添加标签
             plt.annotate(
-                asset, 
+                asset_labels[asset], 
                 (info["risk"] * 100, info["expected_return"] * 100),
                 xytext=(5, 5), 
                 textcoords='offset points', 
@@ -335,9 +395,9 @@ def initial_allocation_page():
                 fontweight='bold'
             )
         
-        plt.title("风险-收益分布", fontsize=14, fontweight='bold')
-        plt.xlabel("风险 (波动率) %", fontsize=12)
-        plt.ylabel("预期年化收益率 %", fontsize=12)
+        plt.title(plot_title, fontsize=14, fontweight='bold')
+        plt.xlabel(x_label, fontsize=12)
+        plt.ylabel(y_label, fontsize=12)
         plt.grid(True, linestyle='--', alpha=0.5)
         plt.tight_layout()
         st.pyplot(fig)
@@ -547,16 +607,10 @@ def recommendation_page():
     
     # 根据用户设置选择标签语言
     if st.session_state.use_english_labels:
-        title1 = "Current Allocation"
-        title2 = "Recommended Allocation"
-        assets_labels = {
-            '股票': 'Stocks', 
-            '债券': 'Bonds', 
-            '货币市场': 'Money Market', 
-            '房地产': 'Real Estate', 
-            '大宗商品': 'Commodities'
-        }
-        legend_title = "Asset Class"
+        title1 = get_en_label("当前配置")
+        title2 = get_en_label("推荐配置")
+        assets_labels = {asset: get_en_label(asset) for asset in assets}
+        legend_title = get_en_label("资产类别")
     else:
         title1 = "当前配置"
         title2 = "推荐配置"
@@ -613,18 +667,16 @@ def recommendation_page():
         
         # 根据用户设置选择标签语言
         if st.session_state.use_english_labels:
-            plot_title = "Risk-Return Distribution"
-            x_label = "Risk (Volatility) %"
-            y_label = "Expected Annual Return %"
-            legend_labels = {
-                '当前配置': 'Current Allocation',
-                '推荐配置': 'Recommended Allocation',
-                '股票': 'Stocks', 
-                '债券': 'Bonds', 
-                '货币市场': 'Money Market', 
-                '房地产': 'Real Estate', 
-                '大宗商品': 'Commodities'
-            }
+            plot_title = get_en_label("风险-收益分布")
+            x_label = get_en_label("风险 (波动率) %")
+            y_label = get_en_label("预期年化收益率 %")
+            
+            # 创建图例标签映射
+            legend_labels = {}
+            for asset in assets:
+                legend_labels[asset] = get_en_label(asset)
+            legend_labels['当前配置'] = get_en_label('初始方案')
+            legend_labels['推荐配置'] = get_en_label('推荐方案')
         else:
             plot_title = "风险-收益分布"
             x_label = "风险 (波动率) %"
@@ -877,17 +929,33 @@ def simulation_page():
     # 使用更小的图表
     fig, ax = plt.subplots(figsize=(8, 4))
     
+    # 根据用户设置选择标签语言
+    if st.session_state.use_english_labels:
+        plot_title = get_en_label("投资组合价值变化")
+        x_label = get_en_label("日期")
+        y_label = "Portfolio Value (CNY)"  # 特殊处理货币单位
+        legend_initial = get_en_label("初始方案")
+        legend_recommended = get_en_label("推荐方案")
+        legend_final = get_en_label("最终方案")
+    else:
+        plot_title = "资产价值变化"
+        x_label = "日期"
+        y_label = "投资组合价值 (元)"
+        legend_initial = "初始方案"
+        legend_recommended = "推荐方案"
+        legend_final = "最终方案"
+    
     # 使用不同线型和颜色以提高可区分度
     plt.plot(dates[::sample_freq], initial_simulation[::sample_freq], 
-             label='初始方案', linewidth=2, linestyle='-', color='blue')
+             label=legend_initial, linewidth=2, linestyle='-', color='blue')
     plt.plot(dates[::sample_freq], recommended_simulation[::sample_freq], 
-             label='推荐方案', linewidth=2, linestyle='--', color='green')
+             label=legend_recommended, linewidth=2, linestyle='--', color='green')
     plt.plot(dates[::sample_freq], final_simulation[::sample_freq], 
-             label='最终方案', linewidth=2, linestyle='-.', color='red')
+             label=legend_final, linewidth=2, linestyle='-.', color='red')
     
-    plt.title("资产价值变化", fontsize=12, fontweight='bold')
-    plt.xlabel("日期", fontsize=10)
-    plt.ylabel("投资组合价值 (元)", fontsize=10)
+    plt.title(plot_title, fontsize=12, fontweight='bold')
+    plt.xlabel(x_label, fontsize=10)
+    plt.ylabel(y_label, fontsize=10)
     plt.grid(True, linestyle='--', alpha=0.5)
     plt.legend(fontsize=10, loc='upper left')
     plt.xticks(rotation=45, fontsize=8)
@@ -957,14 +1025,30 @@ def simulation_page():
         # 使用更小的图表
         fig, ax = plt.subplots(figsize=(8, 4))
         
-        # 使用半透明直方图以便于比较
-        plt.hist(daily_returns_initial, bins=30, alpha=0.4, label='初始方案', color='blue')
-        plt.hist(daily_returns_recommended, bins=30, alpha=0.4, label='推荐方案', color='green')
-        plt.hist(daily_returns_final, bins=30, alpha=0.4, label='最终方案', color='red')
+        # 根据用户设置选择标签语言
+        if st.session_state.use_english_labels:
+            plot_title = get_en_label("日收益率分布")
+            x_label = get_en_label("日收益率")
+            y_label = get_en_label("频率")
+            legend_initial = get_en_label("初始方案")
+            legend_recommended = get_en_label("推荐方案")
+            legend_final = get_en_label("最终方案")
+        else:
+            plot_title = "日收益率分布对比"
+            x_label = "日收益率"
+            y_label = "频率"
+            legend_initial = "初始方案"
+            legend_recommended = "推荐方案"
+            legend_final = "最终方案"
         
-        plt.title("日收益率分布对比", fontsize=12, fontweight='bold')
-        plt.xlabel("日收益率", fontsize=10)
-        plt.ylabel("频率", fontsize=10)
+        # 使用半透明直方图以便于比较
+        plt.hist(daily_returns_initial, bins=30, alpha=0.4, label=legend_initial, color='blue')
+        plt.hist(daily_returns_recommended, bins=30, alpha=0.4, label=legend_recommended, color='green')
+        plt.hist(daily_returns_final, bins=30, alpha=0.4, label=legend_final, color='red')
+        
+        plt.title(plot_title, fontsize=12, fontweight='bold')
+        plt.xlabel(x_label, fontsize=10)
+        plt.ylabel(y_label, fontsize=10)
         plt.grid(True, linestyle='--', alpha=0.5)
         plt.legend(fontsize=10)
         plt.xticks(fontsize=8)
@@ -973,11 +1057,18 @@ def simulation_page():
         st.pyplot(fig)
         
         # 添加一个信息区域解释风险指标
-        st.info("""
-        **波动率**: 衡量投资组合收益的波动程度，值越高表示风险越大。
-        **最大回撤**: 投资组合在特定时期内从峰值到谷值的最大损失百分比。
-        **夏普比率**: 每单位波动风险所获得的超额收益，值越高表示投资效率越高。
-        """)
+        if st.session_state.use_english_labels:
+            st.info("""
+            **Volatility**: Measures the variability of portfolio returns. Higher values indicate higher risk.
+            **Max Drawdown**: The maximum percentage loss from peak to trough during a specific period.
+            **Sharpe Ratio**: Excess return per unit of risk. Higher values indicate better investment efficiency.
+            """)
+        else:
+            st.info("""
+            **波动率**: 衡量投资组合收益的波动程度，值越高表示风险越大。
+            **最大回撤**: 投资组合在特定时期内从峰值到谷值的最大损失百分比。
+            **夏普比率**: 每单位波动风险所获得的超额收益，值越高表示投资效率越高。
+            """)
     
     with tab3:
         # 累计收益率图表
@@ -990,16 +1081,33 @@ def simulation_page():
         
         # 使用更小的图表
         fig, ax = plt.subplots(figsize=(8, 4))
-        plt.plot(dates[::sample_freq], initial_cum_returns[::sample_freq], 
-                 label='初始方案', linewidth=2, color='blue')
-        plt.plot(dates[::sample_freq], rec_cum_returns[::sample_freq], 
-                 label='推荐方案', linewidth=2, color='green')
-        plt.plot(dates[::sample_freq], final_cum_returns[::sample_freq], 
-                 label='最终方案', linewidth=2, color='red')
         
-        plt.title("累计收益率变化", fontsize=12, fontweight='bold')
-        plt.xlabel("日期", fontsize=10)
-        plt.ylabel("累计收益率 (%)", fontsize=10)
+        # 根据用户设置选择标签语言
+        if st.session_state.use_english_labels:
+            plot_title = get_en_label("累计收益率变化")
+            x_label = get_en_label("日期")
+            y_label = get_en_label("累计收益率 (%)")
+            legend_initial = get_en_label("初始方案")
+            legend_recommended = get_en_label("推荐方案")
+            legend_final = get_en_label("最终方案")
+        else:
+            plot_title = "累计收益率变化"
+            x_label = "日期"
+            y_label = "累计收益率 (%)"
+            legend_initial = "初始方案"
+            legend_recommended = "推荐方案"
+            legend_final = "最终方案"
+            
+        plt.plot(dates[::sample_freq], initial_cum_returns[::sample_freq], 
+                 label=legend_initial, linewidth=2, color='blue')
+        plt.plot(dates[::sample_freq], rec_cum_returns[::sample_freq], 
+                 label=legend_recommended, linewidth=2, color='green')
+        plt.plot(dates[::sample_freq], final_cum_returns[::sample_freq], 
+                 label=legend_final, linewidth=2, color='red')
+        
+        plt.title(plot_title, fontsize=12, fontweight='bold')
+        plt.xlabel(x_label, fontsize=10)
+        plt.ylabel(y_label, fontsize=10)
         plt.grid(True, linestyle='--', alpha=0.5)
         plt.legend(fontsize=10)
         plt.axhline(y=0, color='gray', linestyle='-', alpha=0.3)
@@ -1041,7 +1149,8 @@ def main():
     
     # 检查是否需要显示英文标签的提示
     if 'use_english_labels' not in st.session_state:
-        st.session_state.use_english_labels = False
+        # 默认使用英文标签以解决字体问题
+        st.session_state.use_english_labels = True
     
     # Sidebar navigation
     with st.sidebar:
@@ -1052,7 +1161,7 @@ def main():
         st.session_state.use_english_labels = st.checkbox(
             "在图表中使用英文标签 (解决中文显示问题)", 
             value=st.session_state.use_english_labels,
-            help="如果图表中的中文显示为方框，请选中此选项"
+            help="默认选中以避免中文显示为方框，如果您的环境支持中文显示，可以取消选中"
         )
         
         # 实验分组选择 - 在每一页都显示
