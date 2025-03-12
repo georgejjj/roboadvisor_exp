@@ -25,18 +25,57 @@ from config.loader import (
 
 # 设置中文字体的函数
 def set_chinese_font():
-    # 检查字体文件是否存在
-    font_path = os.path.join(os.path.dirname(__file__), 'fonts', 'SourceHanSansCN-Normal.otf')
-    
-    if os.path.exists(font_path):
-        # 如果字体文件存在，使用该字体
-        font_prop = FontProperties(fname=font_path)
-        plt.rcParams['font.family'] = font_prop.get_name()
-    else:
-        # 如果字体文件不存在，尝试使用系统字体
-        plt.rcParams['font.sans-serif'] = ['SimHei', 'DejaVu Sans', 'Arial', 'sans-serif']
+    """配置matplotlib以显示中文字体，针对Streamlit Share环境优化"""
+    try:
+        # 检查字体文件是否存在 (支持TTF和OTF)
+        font_dir = os.path.join(os.path.dirname(__file__), 'fonts')
+        otf_path = os.path.join(font_dir, 'SourceHanSansCN-Normal.otf')
+        ttf_path = os.path.join(font_dir, 'SourceHanSansCN-Normal.ttf')
         
-    plt.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
+        # 打印调试信息
+        print(f"字体目录: {font_dir}")
+        print(f"OTF字体路径存在: {os.path.exists(otf_path)}")
+        print(f"TTF字体路径存在: {os.path.exists(ttf_path)}")
+        
+        # 使用第一个找到的字体文件
+        if os.path.exists(ttf_path):
+            font_path = ttf_path
+            print(f"使用TTF字体文件: {ttf_path}")
+        elif os.path.exists(otf_path):
+            font_path = otf_path
+            print(f"使用OTF字体文件: {otf_path}")
+        else:
+            font_path = None
+            print("找不到任何可用的中文字体文件")
+        
+        if font_path:
+            # 注册字体文件并设置字体
+            from matplotlib.font_manager import fontManager
+            fontManager.addfont(font_path)
+            plt.rcParams['font.family'] = ['sans-serif']
+            plt.rcParams['font.sans-serif'] = ['Source Han Sans CN', 'Source Han Sans', 'WenQuanYi Micro Hei', 'Microsoft YaHei', 'SimHei', 'sans-serif']
+            print(f"成功加载字体文件: {font_path}")
+            
+            # 打印当前可用字体列表（调试用）
+            from matplotlib.font_manager import findSystemFonts, FontProperties
+            fonts = [FontProperties(fname=font).get_name() for font in findSystemFonts(fontpaths=[font_dir])]
+            print(f"字体目录中可用字体: {fonts}")
+        else:
+            # 回退到英文字体并记录警告
+            plt.rcParams['font.family'] = ['sans-serif']
+            plt.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Arial', 'Helvetica', 'sans-serif']
+            print("警告: 无法找到中文字体文件")
+            
+            # 在显著位置添加中文显示问题警告
+            st.warning("⚠️ 中文字体无法正确加载，图表中的中文可能显示为方框。请在本地运行应用以获得最佳体验。", icon="⚠️")
+    except Exception as e:
+        # 出现异常时记录并使用系统字体
+        print(f"设置中文字体时出错: {str(e)}")
+        plt.rcParams['font.family'] = ['sans-serif']
+        plt.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Arial', 'Helvetica', 'sans-serif']
+    
+    # 统一设置负号显示
+    plt.rcParams['axes.unicode_minus'] = False
 
 # Set page config
 st.set_page_config(
@@ -506,6 +545,24 @@ def recommendation_page():
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
     set_chinese_font()
     
+    # 根据用户设置选择标签语言
+    if st.session_state.use_english_labels:
+        title1 = "Current Allocation"
+        title2 = "Recommended Allocation"
+        assets_labels = {
+            '股票': 'Stocks', 
+            '债券': 'Bonds', 
+            '货币市场': 'Money Market', 
+            '房地产': 'Real Estate', 
+            '大宗商品': 'Commodities'
+        }
+        legend_title = "Asset Class"
+    else:
+        title1 = "当前配置"
+        title2 = "推荐配置"
+        assets_labels = {asset: asset for asset in assets}
+        legend_title = "资产类别"
+    
     # 当前配置环形图
     wedges1, texts1, autotexts1 = ax1.pie(
         [st.session_state.initial_allocation[asset] * 100 for asset in assets],
@@ -514,12 +571,12 @@ def recommendation_page():
         startangle=90,
         wedgeprops=dict(width=0.5)  # 设置为环形图
     )
-    ax1.set_title("当前配置")
+    ax1.set_title(title1)
     
     # 添加图例
     ax1.legend(
-        [asset for asset in assets],
-        title="资产类别",
+        [assets_labels[asset] for asset in assets],
+        title=legend_title,
         loc="center left",
         bbox_to_anchor=(1, 0, 0.5, 1)
     )
@@ -532,12 +589,12 @@ def recommendation_page():
         startangle=90,
         wedgeprops=dict(width=0.5)  # 设置为环形图
     )
-    ax2.set_title("推荐配置")
+    ax2.set_title(title2)
     
     # 添加图例
     ax2.legend(
-        [asset for asset in assets],
-        title="资产类别",
+        [assets_labels[asset] for asset in assets],
+        title=legend_title,
         loc="center left",
         bbox_to_anchor=(1, 0, 0.5, 1)
     )
@@ -554,6 +611,27 @@ def recommendation_page():
     with st.expander("点击查看风险收益分布图", expanded=False):
         fig, ax = plt.subplots(figsize=(10, 6))
         
+        # 根据用户设置选择标签语言
+        if st.session_state.use_english_labels:
+            plot_title = "Risk-Return Distribution"
+            x_label = "Risk (Volatility) %"
+            y_label = "Expected Annual Return %"
+            legend_labels = {
+                '当前配置': 'Current Allocation',
+                '推荐配置': 'Recommended Allocation',
+                '股票': 'Stocks', 
+                '债券': 'Bonds', 
+                '货币市场': 'Money Market', 
+                '房地产': 'Real Estate', 
+                '大宗商品': 'Commodities'
+            }
+        else:
+            plot_title = "风险-收益分布"
+            x_label = "风险 (波动率) %"
+            y_label = "预期年化收益率 %"
+            legend_labels = {asset: asset for asset in assets}
+            legend_labels.update({'当前配置': '当前配置', '推荐配置': '推荐配置'})
+        
         # 绘制所有资产点
         asset_markers = {'股票': 'o', '债券': 's', '货币市场': '^', '房地产': 'D', '大宗商品': 'P'}
         asset_colors = {'股票': 'red', '债券': 'blue', '货币市场': 'green', '房地产': 'purple', '大宗商品': 'orange'}
@@ -564,22 +642,24 @@ def recommendation_page():
                 info["expected_return"]*100, 
                 s=100, 
                 alpha=0.7, 
-                label=asset,
+                label=legend_labels.get(asset, asset),
                 marker=asset_markers.get(asset, 'o'),
                 color=asset_colors.get(asset, 'gray')
             )
         
         # 绘制两个投资组合点
-        plt.scatter(initial_risk*100, initial_return*100, color='blue', s=200, marker='*', label='当前配置')
-        plt.scatter(rec_risk*100, rec_return*100, color='green', s=200, marker='*', label='推荐配置')
+        plt.scatter(initial_risk*100, initial_return*100, color='blue', s=200, marker='*', 
+                    label=legend_labels.get('当前配置', '当前配置'))
+        plt.scatter(rec_risk*100, rec_return*100, color='green', s=200, marker='*', 
+                    label=legend_labels.get('推荐配置', '推荐配置'))
         
         # 连接两点
         plt.plot([initial_risk*100, rec_risk*100], [initial_return*100, rec_return*100], 
                 'k--', alpha=0.5, linewidth=1)
         
-        plt.title("风险-收益分布")
-        plt.xlabel("风险 (波动率) %")
-        plt.ylabel("预期年化收益率 %")
+        plt.title(plot_title)
+        plt.xlabel(x_label)
+        plt.ylabel(y_label)
         plt.grid(True, linestyle='--', alpha=0.5)
         plt.legend(loc='best')
         plt.tight_layout()
@@ -959,10 +1039,21 @@ def main():
     # 初始化中文字体设置
     set_chinese_font()
     
+    # 检查是否需要显示英文标签的提示
+    if 'use_english_labels' not in st.session_state:
+        st.session_state.use_english_labels = False
+    
     # Sidebar navigation
     with st.sidebar:
         st.title("金融性格与模拟投资")
         st.write("---")
+        
+        # 添加图表语言切换选项
+        st.session_state.use_english_labels = st.checkbox(
+            "在图表中使用英文标签 (解决中文显示问题)", 
+            value=st.session_state.use_english_labels,
+            help="如果图表中的中文显示为方框，请选中此选项"
+        )
         
         # 实验分组选择 - 在每一页都显示
         experiment_group_selection()
