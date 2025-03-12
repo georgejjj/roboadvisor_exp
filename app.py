@@ -4,6 +4,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from datetime import datetime, timedelta
+import matplotlib as mpl
+import os
+from matplotlib.font_manager import FontProperties
 from config.loader import (
     get_assets, 
     get_asset_names_en, 
@@ -19,6 +22,21 @@ from config.loader import (
     get_experiment_group,
     adjust_recommendation
 )
+
+# 设置中文字体的函数
+def set_chinese_font():
+    # 检查字体文件是否存在
+    font_path = os.path.join(os.path.dirname(__file__), 'fonts', 'SourceHanSansCN-Normal.otf')
+    
+    if os.path.exists(font_path):
+        # 如果字体文件存在，使用该字体
+        font_prop = FontProperties(fname=font_path)
+        plt.rcParams['font.family'] = font_prop.get_name()
+    else:
+        # 如果字体文件不存在，尝试使用系统字体
+        plt.rcParams['font.sans-serif'] = ['SimHei', 'DejaVu Sans', 'Arial', 'sans-serif']
+        
+    plt.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
 
 # Set page config
 st.set_page_config(
@@ -250,8 +268,7 @@ def initial_allocation_page():
         # Create risk-return scatter plot with proper Chinese font support
         fig, ax = plt.subplots(figsize=(8, 5))
         # 设置中文字体
-        plt.rcParams['font.sans-serif'] = ['SimHei', 'DejaVu Sans', 'Arial', 'sans-serif']  
-        plt.rcParams['axes.unicode_minus'] = False  
+        set_chinese_font()
         
         # 使用不同的标记和颜色以提高可辨识度
         asset_markers = {'股票': 'o', '债券': 's', '货币市场': '^', '房地产': 'D', '大宗商品': 'P'}
@@ -487,8 +504,7 @@ def recommendation_page():
     
     # 创建两个环形图
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
-    plt.rcParams['font.sans-serif'] = ['SimHei', 'DejaVu Sans', 'Arial', 'sans-serif']  # 解决中文显示问题
-    plt.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
+    set_chinese_font()
     
     # 当前配置环形图
     wedges1, texts1, autotexts1 = ax1.pie(
@@ -724,8 +740,7 @@ def simulation_page():
         st.caption("注意：本模拟使用蒙特卡洛方法基于历史数据和统计分布生成可能的投资路径。实际投资表现可能与模拟结果有显著差异。")
     
     # 设置中文字体
-    plt.rcParams['font.sans-serif'] = ['SimHei', 'DejaVu Sans', 'Arial', 'sans-serif']  
-    plt.rcParams['axes.unicode_minus'] = False
+    set_chinese_font()
     
     # Run simulations
     initial_simulation = simulate_returns(
@@ -941,6 +956,9 @@ def simulation_page():
 
 # Main app logic
 def main():
+    # 初始化中文字体设置
+    set_chinese_font()
+    
     # Sidebar navigation
     with st.sidebar:
         st.title("金融性格与模拟投资")
